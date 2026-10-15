@@ -32,7 +32,7 @@ In:
 - Push notification fan-out (delegated back to calling app's push pipeline).
 
 Out (initially):
-- A built-in admin UI. Apps are managed via raw `/admin/**` HTTP for v1.
+- A built-in admin UI. The operator console is a separate app, **quill-admin** (repo `quill-admin`, checked out as `../quill_admin`, live at `quill-admin(-dev).urbancare.ge` since 2026-10-16); it only calls `/admin/**`.
 - Voice messages, link previews, **composer** emoji picker — these live in **the calling app's frontend**, not in Quill. See "Frontend features" below. (Message *reactions* are a different thing and are now in — they mutate an existing message, which is server state; see the reversal note in "Skip".)
 - Threaded replies, search. Defer. (Message edit/delete shipped; quote-reply rides the app-owned `metadata` bag and needs no Quill change.)
 - Distributed scaling (Redis adapter, multi-instance). Single instance until proven necessary.
@@ -131,6 +131,16 @@ DELETE /admin/apps/:appId                                → { success: true }  
 - `PATCH /admin/apps/:appId` sets the notify callback target (see "Push notifications"). Write-through to Mongo plus a cache patch, so it takes effect on the next message with no restart and no socket disruption. `{"callbackUrl": null}` — or an empty body — clears it, which switches callbacks off. Validated as an absolute `http`/`https` URL of at most 512 chars; `require_tld` is deliberately off so `http://localhost:8085/…` and in-cluster service names are accepted. 404 if the app is unknown or revoked.
 - `POST /admin/apps/:appId/rotate` generates a new key, replaces `encryptedKey`, sets `rotatedAt`, swaps the cache, **disconnects every open Socket.IO connection for this appId**. Clients reconnect with a fresh signature.
 - `DELETE /admin/apps/:appId` sets `revoked: true`, drops the cache entry, disconnects open sockets. Rooms/participants/messages stay; the appId becomes unreachable. Manual hard-delete of the row is fine when you're sure.
+
+Read-only stats for quill-admin (`src/admin/admin-stats.*`, same `AdminTokenGuard`):
+
+```
+GET /admin/overview?tz=&days=            → totals, per-app counters, messages per day (all apps)
+GET /admin/apps/:appId/rooms             → every room of the app (≤ 2,000, deleted included) with counters
+GET /admin/apps/:appId/rooms/:roomId?tz=&days= → one room: counters, members (joinedAt, lastReadAt, online), per-day series
+```
+
+Counters are rooms, membership rows, distinct users, messages (every row ever sent, tombstones included), messages in the last 24 h, last message time, and users/sockets connected right now (`ConnectionRegistry.liveByApp`, `hasActive`). `tz` is an IANA zone (default `UTC`, 400 `INVALID_TIME_ZONE` otherwise) the per-day series is bucketed in; `days` is 1–90 (default 14). **They never return message content, attachments or metadata**: the console operates Quill, it does not read chats. The message counts group over every row in scope (a collection scan for the overview), fine at today's volume; cache them or keep counters on the room if `chat_messages` reaches millions.
 
 Day-to-day registration:
 
