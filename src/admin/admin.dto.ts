@@ -1,4 +1,15 @@
-import { IsOptional, IsString, IsUrl, Matches, MaxLength, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 import { IdField } from '@/common/transformers/id-field.transformer';
 import { IsoDate } from '@/common/transformers/iso-date.transformer';
 
@@ -44,6 +55,25 @@ export class PatchAppReq {
   callbackUrl?: string | null;
 }
 
+/**
+ * Query for the admin stats routes. `tz` is the IANA zone the per-day series
+ * is bucketed in (the console sends the operator's own; default `UTC`), `days`
+ * the length of that series.
+ */
+export class StatsQuery {
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  tz?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(90)
+  days?: number;
+}
+
 // ── Responses ──────────────────────────────────────────────────────────────
 
 export class AppRes {
@@ -70,4 +100,105 @@ export class RegisterAppRes {
 export class RotateKeyRes {
   /** New plaintext key — replace the value in the consuming app's backend env. */
   privateKey!: string;
+}
+
+// ── Stats (read-only; counts and timestamps, never message content) ────────
+
+/** One calendar day of the per-day series, in the requested time zone. */
+export class DayCountRes {
+  /** `YYYY-MM-DD`. */
+  date!: string;
+  messages!: number;
+}
+
+export class AppStatsRes {
+  @IdField()
+  appId!: string;
+  label!: string;
+  revoked!: boolean;
+  /** Live (non-deleted) rooms. */
+  rooms!: number;
+  /** Membership rows: one per (room, user). */
+  participants!: number;
+  /** Distinct users across the app's rooms. */
+  users!: number;
+  /** Every message row ever sent, deleted ones included. */
+  messages!: number;
+  messages24h!: number;
+  @IsoDate()
+  lastMessageAt!: string | null;
+  /** Users with at least one open socket right now. */
+  liveUsers!: number;
+  liveConnections!: number;
+}
+
+export class StatsTotalsRes {
+  apps!: number;
+  activeApps!: number;
+  rooms!: number;
+  participants!: number;
+  users!: number;
+  messages!: number;
+  messages24h!: number;
+  liveUsers!: number;
+  liveConnections!: number;
+}
+
+export class OverviewRes {
+  @IsoDate()
+  generatedAt!: string;
+  timeZone!: string;
+  @Type(() => StatsTotalsRes)
+  totals!: StatsTotalsRes;
+  @Type(() => AppStatsRes)
+  apps!: AppStatsRes[];
+  /** Oldest day first, zero-filled, all apps together. */
+  @Type(() => DayCountRes)
+  messagesPerDay!: DayCountRes[];
+}
+
+export class RoomStatsRes {
+  /** The caller-supplied room id (urbancare: the apartment id). */
+  @IdField()
+  roomId!: string;
+  name!: string | null;
+  deleted!: boolean;
+  @IsoDate()
+  createdAt!: string;
+  participants!: number;
+  /** Members with an open socket right now (anywhere in the app, not only this room). */
+  liveUsers!: number;
+  messages!: number;
+  messages24h!: number;
+  @IsoDate()
+  lastMessageAt!: string | null;
+}
+
+export class RoomListRes {
+  /** Newest room first. */
+  @Type(() => RoomStatsRes)
+  items!: RoomStatsRes[];
+  /** True when the app has more rooms than one response carries. */
+  truncated!: boolean;
+}
+
+export class ParticipantStatsRes {
+  @IdField()
+  userId!: string;
+  @IsoDate()
+  joinedAt!: string;
+  @IsoDate()
+  lastReadAt!: string | null;
+  online!: boolean;
+}
+
+export class RoomDetailRes {
+  @Type(() => RoomStatsRes)
+  room!: RoomStatsRes;
+  /** Earliest joiner first. */
+  @Type(() => ParticipantStatsRes)
+  participants!: ParticipantStatsRes[];
+  timeZone!: string;
+  @Type(() => DayCountRes)
+  messagesPerDay!: DayCountRes[];
 }

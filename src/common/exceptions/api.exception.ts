@@ -31,6 +31,8 @@ export const ExcKey = {
   INVALID_REACTION: 'INVALID_REACTION',
   INVALID_SIGNATURE: 'INVALID_SIGNATURE',
   UNKNOWN_APP: 'UNKNOWN_APP',
+  /** `tz` query param that is not an IANA time zone name. */
+  INVALID_TIME_ZONE: 'INVALID_TIME_ZONE',
   UNHANDLED: 'UNHANDLED',
 } as const;
 export type ExcKey = (typeof ExcKey)[keyof typeof ExcKey];

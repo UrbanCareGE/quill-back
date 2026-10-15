@@ -40,6 +40,22 @@ export class ConnectionRegistry {
   }
 
   /**
+   * Connected users and open sockets per app, for the admin console. Walks the
+   * whole map, so keep it off every message path.
+   */
+  liveByApp(): Map<string, { users: number; connections: number }> {
+    const out = new Map<string, { users: number; connections: number }>();
+    for (const [key, sockets] of this.byUser) {
+      const appId = key.slice(0, key.indexOf(':'));
+      const entry = out.get(appId) ?? { users: 0, connections: 0 };
+      entry.users += 1;
+      entry.connections += sockets.size;
+      out.set(appId, entry);
+    }
+    return out;
+  }
+
+  /**
    * Disconnect every socket belonging to a given app. Used by admin
    * mutations (revoke / rotate key) so old signatures stop working
    * immediately — clients reconnect and either fail auth (revoke) or
