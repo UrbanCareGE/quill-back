@@ -2,7 +2,7 @@
 
 Multi-tenant chat backend. Built to replace TalkJS in `urbancare_monolith` and be reused by future apps.
 
-**Status: design phase, not yet scaffolded.** This file is the spec — it describes the system we're building, not one that exists.
+**Status: live.** Prod `quill.urbancare.ge` and dev `quill-dev.urbancare.ge` run on the urbancare VM, deployed on push; urbancare is tenant #1. This file began as the design spec and is kept as the source of truth for the code; operations (environments, deploy, env, local-dev safety) are in the folder map `../CLAUDE.md`.
 
 ---
 
@@ -55,8 +55,9 @@ Config:           @nestjs/config (env-driven)
 Logging:          Nest's built-in `Logger` (pino is NOT a dependency)
 Package manager:  npm (package-lock.json — there is no pnpm lockfile)
 Build:            Nest CLI → dist/
-Deploy:           port 8086. Only a Dockerfile is checked in — no systemd unit,
-                  nginx conf, compose file or CI workflow lives in this repo.
+Deploy:           port 8086 (dev 8087). `ops/deploy.sh prod|dev`, run on the VM by
+                  the deploy-on-push watcher (see `../CLAUDE.md`). The systemd
+                  units and nginx vhosts live only on the VM, not in this repo.
 ```
 
 ⚠️ **The Dockerfile does not build.** It runs `corepack enable && pnpm install
@@ -801,6 +802,9 @@ See "Reactions" under the data model and the WebSocket protocol section for the 
 ---
 
 ## References (urbancare-specific context)
+
+Paths below are relative to the urbancare checkout, `~/basement/projects/urbancare/`
+(`../../urbancare/` from here).
 
 - Existing TalkJS integration: `urbancare_monolith/src/main/kotlin/ge/urbancare/core/commons/talkjs/` (`TalkJSApi.kt`, `TalkJSService.kt`, `TalkJSRequests.kt`) — to be deleted.
 - Existing chat module: `urbancare_monolith/src/main/kotlin/ge/urbancare/core/chat/` — `ChatEventListener.kt` keeps the same shape with the listener body swapped to `QuillGatewayApi` calls.

@@ -7,12 +7,15 @@ See `CLAUDE.md` for the full spec — what it is, why it exists, auth model, dat
 ## Quick start
 
 ```bash
-pnpm install
-cp .env.example .env       # fill in MONGO_URI and a real QUILL_APP_URBANCARE_KEY
-pnpm start:dev
+npm ci
+cp .env.example .env       # MONGO_URI, QUILL_DB_NAME, QUILL_MASTER_KEY, QUILL_ADMIN_TOKEN
+npm run start:dev
 ```
 
-Quill boots on `:8086` by default. Health check at `GET /health`.
+Never point a local Quill at the production database. Operations, environments and deploy:
+`../CLAUDE.md`.
+
+Quill boots on `:8086` by default. Liveness at `GET /health`; `ops/deploy.sh` polls `GET /swagger`.
 
 ## Auth model (TL;DR)
 
